@@ -3,7 +3,7 @@ set(COMPONENT_REQUIRES )
 set(COMPONENT_PRIV_REQUIRES )
 
 set(COMPONENT_SRCS 
-    "main.cpp" 
+    "core/main.cpp" 
     "ota/idf_update.cpp" 
     "led/led_strip_encoder.c"
 )

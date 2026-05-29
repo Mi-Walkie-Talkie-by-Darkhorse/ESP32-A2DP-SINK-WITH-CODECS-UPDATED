@@ -103,7 +103,7 @@ python tools/encrypt_firmware.py build/bt_audio_sink.bin --version 1.1.0
 ```
 bt_audio_sink/
   main/
-    main.cpp              # Application entry point
+    core/main.cpp         # Application entry point
     audio/                # Audio pipeline and I2S output
     ble/                  # BLE GATT server for control
     config/               # Application configuration
