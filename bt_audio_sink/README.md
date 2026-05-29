@@ -114,7 +114,6 @@ bt_audio_sink/
     storage/              # NVS settings storage
   components/
     ESP32-A2DP/           # A2DP sink library with codec support
-    arduino-audio-tools/  # Audio tools library
   recovery/               # Recovery partition firmware
   tools/
     encrypt_firmware.py   # OTA encryption tool
@@ -160,7 +159,6 @@ Tested with:
 This project uses:
 
 - [ESP32-A2DP](https://github.com/pschatzmann/ESP32-A2DP) - A2DP sink implementation
-- [arduino-audio-tools](https://github.com/pschatzmann/arduino-audio-tools) - Audio utilities
 
 ## License
 
