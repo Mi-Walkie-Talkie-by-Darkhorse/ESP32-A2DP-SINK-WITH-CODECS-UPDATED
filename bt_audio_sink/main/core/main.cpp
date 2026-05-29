@@ -1522,6 +1522,9 @@ static void buttonsTask(void* arg) {
                 pressStart1 = now;
             } else if (btn1Pressed && r1 == 1) {
                 btn1Pressed = false;
+
+                onEncoderPairingMode();
+/*
                 if ((now - pressStart1) < 1000) {
                     g_dsp.setBassBoost(!g_dsp.isBassBoostEnabled());
                 } else {
@@ -1531,6 +1534,7 @@ static void buttonsTask(void* arg) {
                                        g_dsp.isChannelFlipEnabled(), 
                                        g_dsp.isBypassEnabled());
                 g_ble.updateControl(getControlByte());
+*/
             }
         }
         lastBtn1 = r1;
