@@ -31,4 +31,6 @@ target_compile_options(${COMPONENT_LIB} PRIVATE
     -DA2DP_LEGACY_I2S_SUPPORT=0 
     -DA2DP_I2S_AUDIOTOOLS=1
     -Wno-overloaded-virtual
+    -save-temps
+    -fverbose-asm
 )
