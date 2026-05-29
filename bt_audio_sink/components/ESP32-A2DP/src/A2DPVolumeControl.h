@@ -52,6 +52,17 @@ class A2DPVolumeControl {
 
   virtual void update_audio_data(Frame* data, uint16_t frameCount) {
     if (data != nullptr && frameCount > 0 && (mono_downmix || is_volume_used)) {
+
+      static int ctUpdate = 0;
+      if (!(ctUpdate++ & 0x3FF)) {
+        uint32_t n = frameCount;
+        if (n > 16) n = 16;
+
+        for(uint32_t i = 0; i < n; i += 2) {
+          ESP_LOGI("VolumeControl frame data", "%04hX %04hX %04hX %04hX", data[i].channel1, data[i].channel2, data[i+1].channel1, data[i+1].channel2);
+        }
+      }
+
       ESP_LOGD("VolumeControl", "update_audio_data");
       for (int i = 0; i < frameCount; i++) {
         int32_t pcmLeft = data[i].channel1;
