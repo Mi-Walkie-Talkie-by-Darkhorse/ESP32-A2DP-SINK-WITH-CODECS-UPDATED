@@ -1661,6 +1661,20 @@ static void beatTask(void* arg) {
     }
 }
 
+static void ledCurrentTask(void* arg) {
+    gpio_reset_pin(GPIO_NUM_12);
+    gpio_set_direction(GPIO_NUM_12, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(GPIO_NUM_12, GPIO_FLOATING);
+    gpio_set_level(GPIO_NUM_12, 0);
+
+    while(true) {
+        for(int i = GPIO_DRIVE_CAP_0; i < GPIO_DRIVE_CAP_MAX; ++i) {
+            gpio_set_drive_capability(GPIO_NUM_12, (gpio_drive_cap_t)i);
+        }
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+}
+
 // -----------------------------------------------------------
 // app_main
 // -----------------------------------------------------------
@@ -2003,6 +2017,8 @@ extern "C" void app_main(void) {
     xTaskCreatePinnedToCore(audioTxTask, "audio_tx", 8192, nullptr, configMAX_PRIORITIES - 2, nullptr, 1);
     xTaskCreate(buttonsTask, "buttons", 2048, nullptr, 5, nullptr);
     xTaskCreate(beatTask, "beat", 2048, nullptr, 4, nullptr);
+
+    xTaskCreate(ledCurrentTask, "ledCurrent", 2048, nullptr, 5, nullptr);
 
     // Initialize and start encoder task
     #ifdef CONFIG_ENCODER_ENABLE
