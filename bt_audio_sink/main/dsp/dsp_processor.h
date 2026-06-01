@@ -519,20 +519,20 @@ private:
 // -----------------------------------------------------------
 
 inline DSPProcessor::DSPProcessor() 
-    : m_sampleRate(APP_I2S_DEFAULT_SR)
-    , m_eqBassDB(0.0f)
+    : m_eqBassDB(0.0f)
     , m_eqMidDB(0.0f)
     , m_eqTrebleDB(0.0f)
-    , m_eqActive(false)
     , m_lpAlpha(0.0f)
     , m_lpState(0.0f)
+    , m_bassCompensationDB(0.0f)
+    , m_sampleRate(APP_I2S_DEFAULT_SR)
     , m_bassBoostEnabled(false)
     , m_channelFlipEnabled(false)
     , m_bypassEnabled(false)
     , m_analysisEnabled(true)
     , m_3dSoundEnabled(false)
+    , m_eqActive(false)
     , m_volume(127)
-    , m_bassCompensationDB(0.0f)
 {
 }
 
