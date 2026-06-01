@@ -28,6 +28,7 @@
 #include "audio/audio_pipeline.h"
 #include "audio/sound_player.h"
 #include "audio/overlay_mixer.h"
+#include "audio/A2DPVolumeControlStub.h"
 #include "ble/ble_unified.h"
 #include "ota/idf_update.h"
 
@@ -58,6 +59,7 @@ static AudioPipeline   g_pipeline;
 static OverlayMixer    g_overlayMixer;
 static BleUnifiedService g_ble;
 static BluetoothA2DPSink g_a2dp;
+static A2DPVolumeControlStub g_volumeControl;
 static IdfUpdate       g_update;
 
 // Sound player reference (singleton)
@@ -151,6 +153,8 @@ static void applyEq(int8_t bass, int8_t mid, int8_t treble, bool notifyBle = tru
 static void onEncoderVolume(uint8_t volume) {
     // Volume encoder: set absolute volume (0-127)
     g_a2dp.set_volume(volume);
+
+    g_dsp.setVolume(volume);
     
     // Update LED effect with volume level
     #ifdef CONFIG_LED_MATRIX_ENABLE
@@ -1942,6 +1946,7 @@ extern "C" void app_main(void) {
     g_a2dp.set_task_core(0);
     g_a2dp.set_on_connection_state_changed(onConnectionState);
     g_a2dp.set_on_audio_state_changed(onAudioState);
+    g_a2dp.set_volume_control(&g_volumeControl);
     
     // Volume change callback - sync with LED and encoder controller
     g_a2dp.set_avrc_rn_volumechange([](int volume) {
@@ -1953,6 +1958,8 @@ extern "C" void app_main(void) {
         EncoderController::getInstance().setCurrentVolume((uint8_t)volume);
         ESP_LOGI(TAG, "Phone volume changed to %d - encoder synced", volume);
         #endif
+
+        g_dsp.setVolume((uint8_t)volume);
         
         // Skip max volume sound during connection grace period (ignore initial volume report)
         // Also skip if g_lastConnectTime is 0 (no connection yet - system still initializing)
