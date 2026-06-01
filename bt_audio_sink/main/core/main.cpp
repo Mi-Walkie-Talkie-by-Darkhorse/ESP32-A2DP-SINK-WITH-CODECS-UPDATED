@@ -1663,15 +1663,25 @@ static void beatTask(void* arg) {
 
 static void ledCurrentTask(void* arg) {
     gpio_reset_pin(GPIO_NUM_12);
-    gpio_set_direction(GPIO_NUM_12, GPIO_MODE_OUTPUT);
+    gpio_set_direction(GPIO_NUM_12, GPIO_MODE_OUTPUT_OD);
     gpio_set_pull_mode(GPIO_NUM_12, GPIO_FLOATING);
-    gpio_set_level(GPIO_NUM_12, 0);
+
+    gpio_reset_pin(GPIO_NUM_13);
+    gpio_set_direction(GPIO_NUM_13, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(GPIO_NUM_13, GPIO_FLOATING);
 
     while(true) {
+        gpio_set_level(GPIO_NUM_12, 1);
+        gpio_set_level(GPIO_NUM_13, 0);
+        vTaskDelay(pdMS_TO_TICKS(5000));
+        gpio_set_level(GPIO_NUM_12, 0);
+        gpio_set_level(GPIO_NUM_13, 1);
+
         for(int i = GPIO_DRIVE_CAP_0; i < GPIO_DRIVE_CAP_MAX; ++i) {
             gpio_set_drive_capability(GPIO_NUM_12, (gpio_drive_cap_t)i);
+            gpio_set_drive_capability(GPIO_NUM_13, (gpio_drive_cap_t)i);
+            vTaskDelay(pdMS_TO_TICKS(5000));
         }
-        vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
 
@@ -2018,7 +2028,7 @@ extern "C" void app_main(void) {
     xTaskCreate(buttonsTask, "buttons", 2048, nullptr, 5, nullptr);
     xTaskCreate(beatTask, "beat", 2048, nullptr, 4, nullptr);
 
-    xTaskCreate(ledCurrentTask, "ledCurrent", 2048, nullptr, 5, nullptr);
+    xTaskCreate(ledCurrentTask, "ledCurrent", 2048, nullptr, 6, nullptr);
 
     // Initialize and start encoder task
     #ifdef CONFIG_ENCODER_ENABLE
