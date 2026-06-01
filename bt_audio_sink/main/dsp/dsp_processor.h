@@ -468,9 +468,6 @@ private:
     
     PeakMeter m_peakMeter;
 
-    // Sample rate
-    uint32_t m_sampleRate;
-
     // EQ filters
     Biquad m_eqBassL, m_eqBassR;
     Biquad m_eqMidL, m_eqMidR;
@@ -478,6 +475,9 @@ private:
 
     // Bass boost shelf filters (separate for L/R stereo)
     Biquad m_bassShelfL, m_bassShelfR;
+
+    // Volume-based bass compensation
+    Biquad m_bassCompL, m_bassCompR;  // Bass compensation filters
 
     // Crossover filters
     Biquad m_crossoverLPL, m_crossoverHPR;
@@ -489,11 +489,16 @@ private:
     float m_eqBassDB;
     float m_eqMidDB;
     float m_eqTrebleDB;
-    bool m_eqActive;
 
     // 1-pole low-pass state
     float m_lpAlpha;
     float m_lpState;
+
+    // Volume-based bass compensation
+    float m_bassCompensationDB; // Calculated bass boost in dB
+
+    // Sample rate
+    uint32_t m_sampleRate;
 
     // Control flags
     bool m_bassBoostEnabled;
@@ -501,11 +506,9 @@ private:
     bool m_bypassEnabled;
     bool m_analysisEnabled;
     bool m_3dSoundEnabled;
-    
-    // Volume-based bass compensation
+    bool m_eqActive;
+
     uint8_t m_volume;           // Current volume (0-127)
-    float m_bassCompensationDB; // Calculated bass boost in dB
-    Biquad m_bassCompL, m_bassCompR;  // Bass compensation filters
 
 private:
     void updateBassCompensation();
