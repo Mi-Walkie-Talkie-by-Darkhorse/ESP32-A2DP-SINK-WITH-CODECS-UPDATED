@@ -46,10 +46,11 @@ public:
         , m_shortWriteCount(0)
         , m_writeCount(0)
         , m_lastProcessMs(0)
+        , m_scaleOut(2147483647.0f)
         , m_skipWriteCallback(nullptr)
+        , m_overlayMixer(nullptr)
         , m_wasSkipping(false)
         , m_audioActive(false)
-        , m_overlayMixer(nullptr)
     {
     }
 
@@ -151,6 +152,11 @@ public:
     // Set callback to check if I2S writes should be skipped (e.g., during sound playback)
     void setSkipWriteCallback(ShouldSkipWriteCallback cb) {
         m_skipWriteCallback = cb;
+    }
+
+    void setVolume(float normalizedVolume) {
+        constexpr float scaleOut = 2147483647.0f;
+        m_scaleOut = normalizedVolume * scaleOut;
     }
 
     // Enqueue audio data from BT callback (non-blocking)
@@ -325,7 +331,7 @@ private:
     void process16bit(AudioBuf *buf, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
         const int16_t *smp = (const int16_t *)buf->data;
         constexpr float scale16 = 1.0f / 32768.0f;
-        constexpr float scaleOut = 2147483647.0f;
+        const float scaleOut = m_scaleOut;
         
         // Process in blocks of 4 samples to reduce loop overhead
         uint32_t i = 0;
@@ -402,7 +408,7 @@ private:
     void process32bit(AudioBuf *buf, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
         const int32_t *smp = (const int32_t *)buf->data;
         constexpr float scale32 = 1.0f / 2147483648.0f;
-        constexpr float scaleOut = 2147483647.0f;
+        const float scaleOut = m_scaleOut;
         
         // Process in blocks of 4 samples to reduce loop overhead
         uint32_t i = 0;
@@ -480,7 +486,7 @@ private:
     void process16bitFast(const uint8_t *data, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
         const int16_t *smp = (const int16_t *)data;
         constexpr float scale16 = 1.0f / 32768.0f;
-        constexpr float scaleOut = 2147483647.0f;
+        const float scaleOut = m_scaleOut;
         
         // Process in blocks of 4 samples to reduce loop overhead
         uint32_t i = 0;
@@ -557,7 +563,7 @@ private:
     void process32bitFast(const uint8_t *data, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
         const int32_t *smp = (const int32_t *)data;
         constexpr float scale32 = 1.0f / 2147483648.0f;
-        constexpr float scaleOut = 2147483647.0f;
+        const float scaleOut = m_scaleOut;
         
         // Process in blocks of 4 samples to reduce loop overhead
         uint32_t i = 0;
@@ -642,10 +648,13 @@ private:
     volatile uint32_t m_shortWriteCount;
     volatile uint32_t m_writeCount;
     volatile uint32_t m_lastProcessMs;
-    
+   
+    volatile float m_scaleOut;
+
     ShouldSkipWriteCallback m_skipWriteCallback;
+
+    OverlayMixer* m_overlayMixer;  // For mixing sound effects with BT audio
+
     bool m_wasSkipping;  // Track state transition for DMA clearing
     volatile bool m_audioActive;  // Track if audio is actively streaming
-    
-    OverlayMixer* m_overlayMixer;  // For mixing sound effects with BT audio
 };

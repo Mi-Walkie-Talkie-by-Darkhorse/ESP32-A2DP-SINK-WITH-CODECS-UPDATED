@@ -155,6 +155,7 @@ static void onEncoderVolume(uint8_t volume) {
     g_a2dp.set_volume(volume);
 
     g_dsp.setVolume(volume);
+    g_pipeline.setVolume(g_volumeControl.get_normalized_volume_factor());
     
     // Update LED effect with volume level
     #ifdef CONFIG_LED_MATRIX_ENABLE
@@ -1960,6 +1961,7 @@ extern "C" void app_main(void) {
         #endif
 
         g_dsp.setVolume((uint8_t)volume);
+        g_pipeline.setVolume(g_volumeControl.get_normalized_volume_factor());
         
         // Skip max volume sound during connection grace period (ignore initial volume report)
         // Also skip if g_lastConnectTime is 0 (no connection yet - system still initializing)
