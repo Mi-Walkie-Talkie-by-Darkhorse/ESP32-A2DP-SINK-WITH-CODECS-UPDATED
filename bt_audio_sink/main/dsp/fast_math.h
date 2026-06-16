@@ -8,11 +8,11 @@
 #include <stdint.h>
 #include <math.h>
 
-#ifdef ESP32
+#ifdef __XTENSA__
 static __attribute__((always_inline)) inline
 float fast_recipsf2(float a) {
     float result, temp;
-     asm(
+    asm (
         "recip0.s %0, %2\n"
         "const.s %1, 1\n"
         "msub.s %1, %2, %0\n"
@@ -20,7 +20,7 @@ float fast_recipsf2(float a) {
         "const.s %1, 1\n"
         "msub.s %1, %2, %0\n"
         "maddn.s %0, %0, %1\n"
-        :"=&f"(result),"=&f"(temp):"f"(input)
+        :"=&f"(result),"=&f"(temp):"f"(a)
     );
     return result;
 }
