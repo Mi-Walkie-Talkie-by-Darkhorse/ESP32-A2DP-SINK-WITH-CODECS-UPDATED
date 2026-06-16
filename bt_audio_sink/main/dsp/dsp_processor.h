@@ -37,10 +37,10 @@ public:
 
     // Control flags
     void setBassBoost(bool enable) { m_bassBoostEnabled = enable; }
-    void setChannelFlip(bool enable) { m_channelFlipEnabled = enable; }
-    void setBypass(bool enable) { m_bypassEnabled = enable; }
-    void setAnalysisEnabled(bool enable) { m_analysisEnabled = enable; }
-    void set3DSound(bool enable) { m_3dSoundEnabled = enable; }
+    void setChannelFlip(bool enable) { /*m_channelFlipEnabled = enable;*/ }
+    void setBypass(bool enable) { /*m_bypassEnabled = enable;*/ }
+    void setAnalysisEnabled(bool enable) { /*m_analysisEnabled = enable;*/ }
+    void set3DSound(bool enable) { /*m_3dSoundEnabled = enable;*/ }
 
     bool isBassBoostEnabled() const { return m_bassBoostEnabled; }
     bool isChannelFlipEnabled() const { return m_channelFlipEnabled; }
@@ -519,11 +519,16 @@ private:
 
     // Control flags
     bool m_bassBoostEnabled;
-    bool m_channelFlipEnabled;
-    bool m_bypassEnabled;
-    bool m_analysisEnabled;
-    bool m_3dSoundEnabled;
+//    bool m_channelFlipEnabled;
+//    bool m_bypassEnabled;
+//    bool m_analysisEnabled;
+//    bool m_3dSoundEnabled;
     bool m_eqActive;
+
+    static constexpr bool m_channelFlipEnabled = false;
+    static constexpr bool m_3dSoundEnabled = false;
+    static constexpr bool m_analysisEnabled = false;
+    static constexpr bool m_bypassEnabled = true;
 
     uint8_t m_volume;           // Current volume (0-127)
 
@@ -544,10 +549,10 @@ inline DSPProcessor::DSPProcessor()
     , m_bassCompensationDB(0.0f)
     , m_sampleRate(APP_I2S_DEFAULT_SR)
     , m_bassBoostEnabled(false)
-    , m_channelFlipEnabled(false)
-    , m_bypassEnabled(false)
-    , m_analysisEnabled(true)
-    , m_3dSoundEnabled(false)
+//    , m_channelFlipEnabled(false)
+//    , m_bypassEnabled(false)
+//    , m_analysisEnabled(true)
+//    , m_3dSoundEnabled(false)
     , m_eqActive(false)
     , m_volume(127)
 {
@@ -754,6 +759,6 @@ inline uint8_t DSPProcessor::getControlByte() const {
 
 inline void DSPProcessor::applyControlByte(uint8_t v) {
     m_bassBoostEnabled = (v & 0x01) != 0;
-    m_channelFlipEnabled = (v & 0x02) != 0;
-    m_bypassEnabled = (v & 0x04) != 0;
+//  m_channelFlipEnabled = (v & 0x02) != 0;
+//  m_bypassEnabled = (v & 0x04) != 0;
 }
