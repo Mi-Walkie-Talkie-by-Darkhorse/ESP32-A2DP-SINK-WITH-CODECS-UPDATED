@@ -11,18 +11,16 @@
 #ifdef ESP32
 static __attribute__((always_inline)) inline
 float fast_recipsf2(float a) {
-    float result;
-    asm volatile (
-        "wfr f1, %1\n"
-        "recip0.s f0, f1\n"
-        "const.s f2, 1\n"
-        "msub.s f2, f1, f0\n"
-        "maddn.s f0, f0, f2\n"
-        "const.s f2, 1\n"
-        "msub.s f2, f1, f0\n"
-        "maddn.s f0, f0, f2\n"
-        "rfr %0, f0\n"
-        :"=r"(result):"r"(a):"f0","f1","f2"
+    float result, temp;
+     asm(
+        "recip0.s %0, %2\n"
+        "const.s %1, 1\n"
+        "msub.s %1, %2, %0\n"
+        "madd.s %0, %0, %1\n"
+        "const.s %1, 1\n"
+        "msub.s %1, %2, %0\n"
+        "maddn.s %0, %0, %1\n"
+        :"=&f"(result),"=&f"(temp):"f"(input)
     );
     return result;
 }
