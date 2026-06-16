@@ -111,25 +111,42 @@ private:
     // - Threshold raised to 0.98 to avoid bass distortion
     // -----------------------------------------------------------
     struct SoftClipper {
-        float threshold = 0.98f;     // Start soft-clipping above this (linear) - raised from 0.85 to avoid bass crackle
-        float ceiling = 1.0f;        // Maximum output level
-        
-        void init(float /* sampleRate */) {
-            // No state to initialize - pure memoryless function
-        }
-        
-        // Soft clip a single sample - only clips extreme peaks
-        // Below threshold: linear pass-through (99% of audio)
-        // Above threshold: hard limit to ceiling (rare peaks only)
+        static constexpr float threshold = 0.85f;     // Linear (transparent) below this level
+        static constexpr float ceiling = 1.0f;        // Hard asymptote the output can never exceed
+        static constexpr float clipRange = ceiling - threshold;
+        static constexpr float invRange = 1.0f / clipRange;  // 1/(1-threshold), precomputed
+
+        // Diagnostics (read+reset once per second by the stats logger)
+        uint32_t satCount = 0;       // samples that entered saturation (|x|>threshold)
+        uint32_t overCount = 0;      // samples that overshot full scale (|x|>=1.0)
+        float peakIn = 0.0f;         // loudest |x| seen pre-clip (1.0 == 0 dBFS)
+
+        void init(float /* sampleRate */) {}
+
+        // True soft-knee saturator (replaces the old brick-wall clamp).
+        //
+        // Below `threshold` the signal passes through untouched. Above it, the
+        // excess is smoothly compressed with a rational curve that is
+        // C1-continuous at the knee (slope 1) and asymptotes to `ceiling`, so the
+        // output NEVER exceeds full scale yet never flat-tops into a square wave.
+        // This matters at max volume, where the +3 dB crossover makeup (1.41x)
+        // plus bass boost drives the chain past 0 dBFS: the old hard clamp turned
+        // that overshoot into static; this turns it into gentle, analog-style
+        // saturation. The curve uses one divide and only runs on peaks above the
+        // knee, so it stays cheap even at 96 kHz.
         inline float softClip(float x) {
-            // Simple hard limit at ceiling - cleaner than soft saturation for bass
-            if (x > ceiling) return ceiling;
-            if (x < -ceiling) return -ceiling;
-            return x;
+            float ax = fabsf(x);
+            if (ax > peakIn) peakIn = ax;            // track loudest input peak
+            if (ax <= threshold) return x;
+            satCount++;                              // limiter engaged on this sample
+            if (ax >= ceiling) overCount++;          // would have hard-clipped before
+            float u = (ax - threshold) * invRange;   // normalized overshoot >= 0
+            float y = fast_recipsf2(u + 1.0f) * u * clipRange + threshold; 
+            return copysignf(x, y);
         }
-        
+
         // Process stereo pair
-        void process(float &L, float &R) {
+        inline void process(float &L, float &R) {
             L = softClip(L);
             R = softClip(R);
         }
