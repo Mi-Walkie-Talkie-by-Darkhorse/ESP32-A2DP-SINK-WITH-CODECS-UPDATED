@@ -142,7 +142,7 @@ private:
             if (ax >= ceiling) overCount++;          // would have hard-clipped before
             float u = (ax - threshold) * invRange;   // normalized overshoot >= 0
             float y = fast_recipsf2(u + 1.0f) * u * clipRange + threshold; 
-            return copysignf(x, y);
+            return copysignf(y, x);
         }
 
         // Process stereo pair
