@@ -155,8 +155,11 @@ public:
     }
 
     void setVolume(float normalizedVolume) {
-        constexpr float scaleOut = 2147483647.0f;
-        m_scaleOut = normalizedVolume * scaleOut;
+        constexpr float scale16 = 1.0f / 32768.0f;
+        constexpr float scale32 = 1.0f / 2147483648.0f;
+
+        m_scaleIn16 = normalizedVolume * scale16;
+        m_scaleIn32 = normalizedVolume * scale32;
     }
 
     // Enqueue audio data from BT callback (non-blocking)
@@ -330,8 +333,8 @@ private:
 
     void process16bit(AudioBuf *buf, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
         const int16_t *smp = (const int16_t *)buf->data;
-        constexpr float scale16 = 1.0f / 32768.0f;
-        const float scaleOut = m_scaleOut;
+        const float scale16 = m_scaleIn16;
+        constexpr float scaleOut = 2147483648.0f;
         
         // Process in blocks of 4 samples to reduce loop overhead
         uint32_t i = 0;
@@ -407,8 +410,8 @@ private:
 
     void process32bit(AudioBuf *buf, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
         const int32_t *smp = (const int32_t *)buf->data;
-        constexpr float scale32 = 1.0f / 2147483648.0f;
-        const float scaleOut = m_scaleOut;
+        const float scale32 = m_scaleIn32;
+        constexpr float scaleOut = 2147483648.0f;
         
         // Process in blocks of 4 samples to reduce loop overhead
         uint32_t i = 0;
@@ -485,8 +488,8 @@ private:
     // Fast versions that take a data pointer (for staging buffer optimization)
     void process16bitFast(const uint8_t *data, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
         const int16_t *smp = (const int16_t *)data;
-        constexpr float scale16 = 1.0f / 32768.0f;
-        const float scaleOut = m_scaleOut;
+        const float scale16 = m_scaleIn16;
+        constexpr float scaleOut = 2147483648.0f;
         
         // Process in blocks of 4 samples to reduce loop overhead
         uint32_t i = 0;
@@ -562,8 +565,8 @@ private:
 
     void process32bitFast(const uint8_t *data, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
         const int32_t *smp = (const int32_t *)data;
-        constexpr float scale32 = 1.0f / 2147483648.0f;
-        const float scaleOut = m_scaleOut;
+        const float scale32 = m_scaleIn32;
+        constexpr float scaleOut = 2147483648.0f;
         
         // Process in blocks of 4 samples to reduce loop overhead
         uint32_t i = 0;
@@ -649,7 +652,7 @@ private:
     volatile uint32_t m_writeCount;
     volatile uint32_t m_lastProcessMs;
    
-    volatile float m_scaleOut;
+    volatile float m_scaleIn16, m_scaleIn32;
 
     ShouldSkipWriteCallback m_skipWriteCallback;
 
