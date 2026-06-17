@@ -326,171 +326,23 @@ public:
     }
 
 private:
-    static constexpr const char* TAG = "AudioPipe";
+    static constexpr const char TAG[] = "AudioPipe";
 
     static uint32_t millis32() {
         return (uint32_t)(esp_timer_get_time() / 1000ULL);
     }
 
-    void process16bit(AudioBuf *buf, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
-        const int16_t *smp = (const int16_t *)buf->data;
-        const float scale16 = m_scaleIn16;
-        constexpr float scaleOut = 2147483648.0f;
-        
-        // Process in blocks of 4 samples to reduce loop overhead
-        uint32_t i = 0;
-        const uint32_t unrollEnd = frames & ~3u;  // Round down to multiple of 4
-        int32_t * const dspOut = m_dspOut;
-        
-        if (channels == 1) {
-            // Mono path - unrolled
-            for (; i < unrollEnd; i += 4) {
-                float L0 = (float)smp[i] * scale16;
-                float L1 = (float)smp[i + 1] * scale16;
-                float L2 = (float)smp[i + 2] * scale16;
-                float L3 = (float)smp[i + 3] * scale16;
-                float R0 = L0, R1 = L1, R2 = L2, R3 = L3;
-                
-                dsp.processStereo(L0, R0);
-                dsp.processStereo(L1, R1);
-                dsp.processStereo(L2, R2);
-                dsp.processStereo(L3, R3);
-                
-                dspOut[2 * i + 0] = (int32_t)(L0 * scaleOut);
-                dspOut[2 * i + 1] = (int32_t)(R0 * scaleOut);
-                dspOut[2 * (i + 1) + 0] = (int32_t)(L1 * scaleOut);
-                dspOut[2 * (i + 1) + 1] = (int32_t)(R1 * scaleOut);
-                dspOut[2 * (i + 2) + 0] = (int32_t)(L2 * scaleOut);
-                dspOut[2 * (i + 2) + 1] = (int32_t)(R2 * scaleOut);
-                dspOut[2 * (i + 3) + 0] = (int32_t)(L3 * scaleOut);
-                dspOut[2 * (i + 3) + 1] = (int32_t)(R3 * scaleOut);
-            }
-            // Handle remaining samples
-            for (; i < frames; i++) {
-                float L = (float)smp[i] * scale16;
-                float R = L;
-                dsp.processStereo(L, R);
-                dspOut[2 * i + 0] = (int32_t)(L * scaleOut);
-                dspOut[2 * i + 1] = (int32_t)(R * scaleOut);
-            }
-        } else {
-            // Stereo path - unrolled
-            for (; i < unrollEnd; i += 4) {
-                float L0 = (float)smp[(i) * 2 + 0] * scale16;
-                float R0 = (float)smp[(i) * 2 + 1] * scale16;
-                float L1 = (float)smp[(i + 1) * 2 + 0] * scale16;
-                float R1 = (float)smp[(i + 1) * 2 + 1] * scale16;
-                float L2 = (float)smp[(i + 2) * 2 + 0] * scale16;
-                float R2 = (float)smp[(i + 2) * 2 + 1] * scale16;
-                float L3 = (float)smp[(i + 3) * 2 + 0] * scale16;
-                float R3 = (float)smp[(i + 3) * 2 + 1] * scale16;
-                
-                dsp.processStereo(L0, R0);
-                dsp.processStereo(L1, R1);
-                dsp.processStereo(L2, R2);
-                dsp.processStereo(L3, R3);
-                
-                dspOut[2 * i + 0] = (int32_t)(L0 * scaleOut);
-                dspOut[2 * i + 1] = (int32_t)(R0 * scaleOut);
-                dspOut[2 * (i + 1) + 0] = (int32_t)(L1 * scaleOut);
-                dspOut[2 * (i + 1) + 1] = (int32_t)(R1 * scaleOut);
-                dspOut[2 * (i + 2) + 0] = (int32_t)(L2 * scaleOut);
-                dspOut[2 * (i + 2) + 1] = (int32_t)(R2 * scaleOut);
-                dspOut[2 * (i + 3) + 0] = (int32_t)(L3 * scaleOut);
-                dspOut[2 * (i + 3) + 1] = (int32_t)(R3 * scaleOut);
-            }
-            // Handle remaining samples
-            for (; i < frames; i++) {
-                float L = (float)smp[i * channels + 0] * scale16;
-                float R = (float)smp[i * channels + 1] * scale16;
-                dsp.processStereo(L, R);
-                dspOut[2 * i + 0] = (int32_t)(L * scaleOut);
-                dspOut[2 * i + 1] = (int32_t)(R * scaleOut);
-            }
-        }
+    void process16bit(const AudioBuf * const buf, uint32_t frames, uint8_t channels, DSPProcessor &dsp) const {
+        process16bitFast(buf->data, frames, channels, dsp);
     }
 
-    void process32bit(AudioBuf *buf, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
-        const int32_t *smp = (const int32_t *)buf->data;
-        const float scale32 = m_scaleIn32;
-        constexpr float scaleOut = 2147483648.0f;
-        
-        // Process in blocks of 4 samples to reduce loop overhead
-        uint32_t i = 0;
-        const uint32_t unrollEnd = frames & ~3u;  // Round down to multiple of 4
-        int32_t * const dspOut = m_dspOut;
-        
-        if (channels == 1) {
-            // Mono path - unrolled
-            for (; i < unrollEnd; i += 4) {
-                float L0 = (float)smp[i] * scale32;
-                float L1 = (float)smp[i + 1] * scale32;
-                float L2 = (float)smp[i + 2] * scale32;
-                float L3 = (float)smp[i + 3] * scale32;
-                float R0 = L0, R1 = L1, R2 = L2, R3 = L3;
-                
-                dsp.processStereo(L0, R0);
-                dsp.processStereo(L1, R1);
-                dsp.processStereo(L2, R2);
-                dsp.processStereo(L3, R3);
-                
-                dspOut[2 * i + 0] = (int32_t)(L0 * scaleOut);
-                dspOut[2 * i + 1] = (int32_t)(R0 * scaleOut);
-                dspOut[2 * (i + 1) + 0] = (int32_t)(L1 * scaleOut);
-                dspOut[2 * (i + 1) + 1] = (int32_t)(R1 * scaleOut);
-                dspOut[2 * (i + 2) + 0] = (int32_t)(L2 * scaleOut);
-                dspOut[2 * (i + 2) + 1] = (int32_t)(R2 * scaleOut);
-                dspOut[2 * (i + 3) + 0] = (int32_t)(L3 * scaleOut);
-                dspOut[2 * (i + 3) + 1] = (int32_t)(R3 * scaleOut);
-            }
-            // Handle remaining samples
-            for (; i < frames; i++) {
-                float L = (float)smp[i] * scale32;
-                float R = L;
-                dsp.processStereo(L, R);
-                dspOut[2 * i + 0] = (int32_t)(L * scaleOut);
-                dspOut[2 * i + 1] = (int32_t)(R * scaleOut);
-            }
-        } else {
-            // Stereo path - unrolled
-            for (; i < unrollEnd; i += 4) {
-                float L0 = (float)smp[(i) * 2 + 0] * scale32;
-                float R0 = (float)smp[(i) * 2 + 1] * scale32;
-                float L1 = (float)smp[(i + 1) * 2 + 0] * scale32;
-                float R1 = (float)smp[(i + 1) * 2 + 1] * scale32;
-                float L2 = (float)smp[(i + 2) * 2 + 0] * scale32;
-                float R2 = (float)smp[(i + 2) * 2 + 1] * scale32;
-                float L3 = (float)smp[(i + 3) * 2 + 0] * scale32;
-                float R3 = (float)smp[(i + 3) * 2 + 1] * scale32;
-                
-                dsp.processStereo(L0, R0);
-                dsp.processStereo(L1, R1);
-                dsp.processStereo(L2, R2);
-                dsp.processStereo(L3, R3);
-                
-                dspOut[2 * i + 0] = (int32_t)(L0 * scaleOut);
-                dspOut[2 * i + 1] = (int32_t)(R0 * scaleOut);
-                dspOut[2 * (i + 1) + 0] = (int32_t)(L1 * scaleOut);
-                dspOut[2 * (i + 1) + 1] = (int32_t)(R1 * scaleOut);
-                dspOut[2 * (i + 2) + 0] = (int32_t)(L2 * scaleOut);
-                dspOut[2 * (i + 2) + 1] = (int32_t)(R2 * scaleOut);
-                dspOut[2 * (i + 3) + 0] = (int32_t)(L3 * scaleOut);
-                dspOut[2 * (i + 3) + 1] = (int32_t)(R3 * scaleOut);
-            }
-            // Handle remaining samples
-            for (; i < frames; i++) {
-                float L = (float)smp[i * channels + 0] * scale32;
-                float R = (float)smp[i * channels + 1] * scale32;
-                dsp.processStereo(L, R);
-                dspOut[2 * i + 0] = (int32_t)(L * scaleOut);
-                dspOut[2 * i + 1] = (int32_t)(R * scaleOut);
-            }
-        }
+    void process32bit(const AudioBuf * const buf, uint32_t frames, uint8_t channels, DSPProcessor &dsp) const {
+        process32bitFast(buf->data, frames, channels, dsp);
     }
 
     // Fast versions that take a data pointer (for staging buffer optimization)
-    void process16bitFast(const uint8_t *data, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
-        const int16_t *smp = (const int16_t *)data;
+    void process16bitFast(const uint8_t * const data, uint32_t frames, uint8_t channels, DSPProcessor &dsp) const {
+        const int16_t * const smp = (const int16_t *)data;
         const float scale16 = m_scaleIn16;
         constexpr float scaleOut = 2147483648.0f;
         
@@ -567,8 +419,8 @@ private:
         }
     }
 
-    void process32bitFast(const uint8_t *data, uint32_t frames, uint8_t channels, DSPProcessor &dsp) {
-        const int32_t *smp = (const int32_t *)data;
+    void process32bitFast(const uint8_t * const data, uint32_t frames, uint8_t channels, DSPProcessor &dsp) const {
+        const int32_t * const smp = (const int32_t *)data;
         const float scale32 = m_scaleIn32;
         constexpr float scaleOut = 2147483648.0f;
         
