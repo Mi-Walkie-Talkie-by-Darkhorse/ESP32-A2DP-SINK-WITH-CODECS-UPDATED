@@ -1522,10 +1522,10 @@ static void buttonsTask(void* arg) {
         bool r1 = gpio_get_level((gpio_num_t)APP_BUTTON1_GPIO);
         if (r1 != lastBtn1) debounce1 = now;
         if ((now - debounce1) > 25) {
-            if (!btn1Pressed && r1 == 0) {
+            if (!btn1Pressed && r1 == 1) {
                 btn1Pressed = true;
                 pressStart1 = now;
-            } else if (btn1Pressed && r1 == 1) {
+            } else if (btn1Pressed && r1 == 0) {
                 btn1Pressed = false;
 
                 onEncoderPairingMode();
