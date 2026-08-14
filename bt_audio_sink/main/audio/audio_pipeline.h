@@ -363,22 +363,22 @@ private:
                 dsp.processStereo(L2, R2);
                 dsp.processStereo(L3, R3);
                 
-                dspOut[2 * i + 0] = L0 * scaleOut;
-                dspOut[2 * i + 1] = R0 * scaleOut;
-                dspOut[2 * (i + 1) + 0] = L1 * scaleOut;
-                dspOut[2 * (i + 1) + 1] = R1 * scaleOut;
-                dspOut[2 * (i + 2) + 0] = L2 * scaleOut;
-                dspOut[2 * (i + 2) + 1] = R2 * scaleOut;
-                dspOut[2 * (i + 3) + 0] = L3 * scaleOut;
-                dspOut[2 * (i + 3) + 1] = R3 * scaleOut;
+                dspOut[2 * i + 0] = (int32_t)(L0 * scaleOut) - 1;
+                dspOut[2 * i + 1] = (int32_t)(R0 * scaleOut) - 1;
+                dspOut[2 * (i + 1) + 0] = (int32_t)(L1 * scaleOut) - 1;
+                dspOut[2 * (i + 1) + 1] = (int32_t)(R1 * scaleOut) - 1;
+                dspOut[2 * (i + 2) + 0] = (int32_t)(L2 * scaleOut) - 1;
+                dspOut[2 * (i + 2) + 1] = (int32_t)(R2 * scaleOut) - 1;
+                dspOut[2 * (i + 3) + 0] = (int32_t)(L3 * scaleOut) - 1;
+                dspOut[2 * (i + 3) + 1] = (int32_t)(R3 * scaleOut) - 1;
             }
             // Handle remaining samples
             for (; i < frames; i++) {
                 float L = scaleIn * sample[i];
                 float R = L;
                 dsp.processStereo(L, R);
-                dspOut[2 * i + 0] = L * scaleOut;
-                dspOut[2 * i + 1] = R * scaleOut;
+                dspOut[2 * i + 0] = (int32_t)(L * scaleOut) - 1;
+                dspOut[2 * i + 1] = (int32_t)(R * scaleOut) - 1;
             }
         } else {
             // Stereo path - unrolled
@@ -397,22 +397,22 @@ private:
                 dsp.processStereo(L2, R2);
                 dsp.processStereo(L3, R3);
                 
-                dspOut[2 * i + 0] = L0 * scaleOut;
-                dspOut[2 * i + 1] = R0 * scaleOut;
-                dspOut[2 * (i + 1) + 0] = L1 * scaleOut;
-                dspOut[2 * (i + 1) + 1] = R1 * scaleOut;
-                dspOut[2 * (i + 2) + 0] = L2 * scaleOut;
-                dspOut[2 * (i + 2) + 1] = R2 * scaleOut;
-                dspOut[2 * (i + 3) + 0] = L3 * scaleOut;
-                dspOut[2 * (i + 3) + 1] = R3 * scaleOut;
+                dspOut[2 * i + 0] = (int32_t)(L0 * scaleOut) - 1;
+                dspOut[2 * i + 1] = (int32_t)(R0 * scaleOut) - 1;
+                dspOut[2 * (i + 1) + 0] = (int32_t)(L1 * scaleOut) - 1;
+                dspOut[2 * (i + 1) + 1] = (int32_t)(R1 * scaleOut) - 1;
+                dspOut[2 * (i + 2) + 0] = (int32_t)(L2 * scaleOut) - 1;
+                dspOut[2 * (i + 2) + 1] = (int32_t)(R2 * scaleOut) - 1;
+                dspOut[2 * (i + 3) + 0] = (int32_t)(L3 * scaleOut) - 1;
+                dspOut[2 * (i + 3) + 1] = (int32_t)(R3 * scaleOut) - 1;
             }
             // Handle remaining samples
             for (; i < frames; i++) {
                 float L = scaleIn * sample[i * channels + 0];
                 float R = scaleIn * sample[i * channels + 1];
                 dsp.processStereo(L, R);
-                dspOut[2 * i + 0] = L * scaleOut;
-                dspOut[2 * i + 1] = R * scaleOut;
+                dspOut[2 * i + 0] = (int32_t)(L * scaleOut) - 1;
+                dspOut[2 * i + 1] = (int32_t)(R * scaleOut) - 1;
             }
         }
     }
