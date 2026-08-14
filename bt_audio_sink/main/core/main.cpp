@@ -225,43 +225,6 @@ static void onEncoderBrightness(uint8_t brightness) {
     #endif
 }
 
-static void onEncoderPairingMode() {
-    // Mid encoder button: enter pairing mode
-    // If connected, disconnect first
-    esp_a2d_connection_state_t state = g_a2dp.get_connection_state();
-    
-    // Set pairing mode flag - prevents disconnect callback from interfering
-    g_pairingModeActive = true;
-    
-    if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
-        ESP_LOGI(TAG, "Disconnecting current device to enter pairing mode...");
-        g_a2dp.disconnect();
-        vTaskDelay(pdMS_TO_TICKS(500));  // Wait for disconnect
-    }
-    
-    // Reset I2S to default sample rate for sound playback
-    g_sampleRate = APP_I2S_DEFAULT_SAMPLE_RATE;
-    g_i2s.updateClock(APP_I2S_DEFAULT_SAMPLE_RATE);
-    g_dsp.setSampleRate(APP_I2S_DEFAULT_SAMPLE_RATE);
-    
-    // Enable discoverable mode for new device pairing
-    // ESP_BT_GENERAL_DISCOVERABLE = visible to all devices for pairing
-    ESP_LOGI(TAG, "Entering pairing mode - device is now discoverable");
-    g_a2dp.set_discoverability(ESP_BT_GENERAL_DISCOVERABLE);
-    
-    // Play pairing sound (exclusive mode - no A2DP during pairing anyway)
-    // Use actual I2S sample rate to ensure proper resampling
-    g_sound.play(SOUND_PAIRING, g_i2s.getSampleRate(), SOUND_MODE_EXCLUSIVE);
-    
-    // Start pairing mode LED animation (slow blue pulsing)
-    #ifdef CONFIG_LED_MATRIX_ENABLE
-    LedController::getInstance().setPairingMode(true);
-    #endif
-    
-    // NOTE: g_pairingModeActive stays true until a device connects
-    // This prevents the disconnect callback from resetting discoverability or LED animation
-}
-
 static void onEncoderEffectChange(int effectId, bool confirmed) {
     // Treble encoder: change LED effect
     #ifdef CONFIG_LED_MATRIX_ENABLE
@@ -301,6 +264,43 @@ static void onEncoder3DSound(bool enabled) {
     ESP_LOGI(TAG, "Encoder 3D Sound: %s", enabled ? "ON" : "OFF");
 }
 #endif
+
+static void onEncoderPairingMode() {
+    // Mid encoder button: enter pairing mode
+    // If connected, disconnect first
+    esp_a2d_connection_state_t state = g_a2dp.get_connection_state();
+    
+    // Set pairing mode flag - prevents disconnect callback from interfering
+    g_pairingModeActive = true;
+    
+    if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
+        ESP_LOGI(TAG, "Disconnecting current device to enter pairing mode...");
+        g_a2dp.disconnect();
+        vTaskDelay(pdMS_TO_TICKS(500));  // Wait for disconnect
+    }
+    
+    // Reset I2S to default sample rate for sound playback
+    g_sampleRate = APP_I2S_DEFAULT_SAMPLE_RATE;
+    g_i2s.updateClock(APP_I2S_DEFAULT_SAMPLE_RATE);
+    g_dsp.setSampleRate(APP_I2S_DEFAULT_SAMPLE_RATE);
+    
+    // Enable discoverable mode for new device pairing
+    // ESP_BT_GENERAL_DISCOVERABLE = visible to all devices for pairing
+    ESP_LOGI(TAG, "Entering pairing mode - device is now discoverable");
+    g_a2dp.set_discoverability(ESP_BT_GENERAL_DISCOVERABLE);
+    
+    // Play pairing sound (exclusive mode - no A2DP during pairing anyway)
+    // Use actual I2S sample rate to ensure proper resampling
+    g_sound.play(SOUND_PAIRING, g_i2s.getSampleRate(), SOUND_MODE_EXCLUSIVE);
+    
+    // Start pairing mode LED animation (slow blue pulsing)
+    #ifdef CONFIG_LED_MATRIX_ENABLE
+    LedController::getInstance().setPairingMode(true);
+    #endif
+    
+    // NOTE: g_pairingModeActive stays true until a device connects
+    // This prevents the disconnect callback from resetting discoverability or LED animation
+}
 
 // -----------------------------------------------------------
 // BLE callbacks
@@ -1666,6 +1666,48 @@ static void beatTask(void* arg) {
     }
 }
 
+
+static void setupGPIO() {
+        gpio_config_t btn_cfg {
+            .pin_bit_mask =
+                (1ULL << GPIO_NUM_34),  /* Button input */
+            .mode = GPIO_MODE_INPUT
+        };
+        gpio_config(&btn_cfg);
+
+        btn_cfg.pin_bit_mask =
+                (1ULL << GPIO_NUM_4) |  /* PCM5102 LDO enable */
+                (1ULL << GPIO_NUM_5) |  /* PCM5102 Mute */
+                (1ULL << GPIO_NUM_19)|  /* TPA3116 Mute */
+                (1ULL << GPIO_NUM_33);  /* Battery voltage sampler strobe */
+        btn_cfg.mode = GPIO_MODE_OUTPUT,
+        gpio_config(&btn_cfg);
+        gpio_set_level(GPIO_NUM_4, 1);
+        gpio_set_level(GPIO_NUM_5, 1);
+        gpio_set_level(GPIO_NUM_19, 0);
+
+        btn_cfg.pin_bit_mask =
+                (1ULL << GPIO_NUM_21)|  /* Button LED Red */
+                (1ULL << GPIO_NUM_22)|  /* Button LED Green */
+                (1ULL << GPIO_NUM_23);  /* Button LED Blue */
+        btn_cfg.mode = GPIO_MODE_OUTPUT_OD,
+        gpio_config(&btn_cfg);
+        gpio_set_drive_capability(GPIO_NUM_21, GPIO_DRIVE_CAP_1);
+        gpio_set_drive_capability(GPIO_NUM_22, GPIO_DRIVE_CAP_1);
+        gpio_set_drive_capability(GPIO_NUM_23, GPIO_DRIVE_CAP_1);
+        gpio_set_level(GPIO_NUM_21, 1);
+        gpio_set_level(GPIO_NUM_22, 1);
+        gpio_set_level(GPIO_NUM_23, 0);
+
+        btn_cfg.pin_bit_mask =
+                (1ULL << GPIO_NUM_18);  /* TPA3116 Shutdown & Fault */
+        btn_cfg.mode = GPIO_MODE_INPUT_OUTPUT_OD,
+        btn_cfg.pull_up_en = GPIO_PULLUP_ENABLE;
+        gpio_config(&btn_cfg);
+        gpio_set_level(GPIO_NUM_18, 1);
+}
+
+
 // -----------------------------------------------------------
 // app_main
 // -----------------------------------------------------------
@@ -1675,22 +1717,18 @@ extern "C" void app_main(void) {
     // Hold Button 1 (GPIO 18) during boot to enter recovery mode
     // ========================================================================
     {
-        // Configure button GPIO as input with pullup (before NVS init for fastest check)
-        gpio_config_t btn_cfg = {};
-        btn_cfg.mode = GPIO_MODE_INPUT;
-        btn_cfg.pin_bit_mask = (1ULL << APP_BUTTON1_GPIO);
-        btn_cfg.pull_up_en = GPIO_PULLUP_ENABLE;
-        gpio_config(&btn_cfg);
+        // Configure GPIO (before NVS init for fastest check)
+        setupGPIO();
         
-        // Read button state (active low = pressed when 0)
-        bool buttonPressed = (gpio_get_level((gpio_num_t)APP_BUTTON1_GPIO) == 0);
+        // Read button state (active high = pressed when 1)
+        bool buttonPressed = (gpio_get_level((gpio_num_t)APP_BUTTON1_GPIO) != 0);
         
         if (buttonPressed) {
             ESP_LOGW(TAG, "Recovery button held - checking for recovery partition...");
             
             // Wait a moment to debounce and confirm intentional press
             vTaskDelay(pdMS_TO_TICKS(500));
-            buttonPressed = (gpio_get_level((gpio_num_t)APP_BUTTON1_GPIO) == 0);
+            buttonPressed = (gpio_get_level((gpio_num_t)APP_BUTTON1_GPIO) == 1);
             
             if (buttonPressed) {
                 // Find recovery partition by label (uses "ota_2" subtype for bootloader compatibility)
@@ -1822,20 +1860,6 @@ extern "C" void app_main(void) {
     g_pipeline.setSkipWriteCallback([]() -> bool {
         return g_sound.isExclusivePlaying();
     });
-
-    // GPIO init (buttons + LED)
-    gpio_config_t io = {};
-    io.intr_type = GPIO_INTR_DISABLE;
-    io.mode = GPIO_MODE_INPUT;
-    io.pin_bit_mask = (1ULL << APP_BUTTON1_GPIO) | (1ULL << APP_BUTTON2_GPIO);
-    io.pull_up_en = GPIO_PULLUP_ENABLE;
-    gpio_config(&io);
-
-    gpio_config_t led = {};
-    led.mode = GPIO_MODE_OUTPUT;
-    led.pin_bit_mask = (1ULL << APP_BEAT_LED_GPIO);
-    gpio_config(&led);
-    gpio_set_level((gpio_num_t)APP_BEAT_LED_GPIO, 0);
 
     // ========================================================================
     // STARTUP SEQUENCE: Play startup sound + LED animation BEFORE BLE/A2DP
