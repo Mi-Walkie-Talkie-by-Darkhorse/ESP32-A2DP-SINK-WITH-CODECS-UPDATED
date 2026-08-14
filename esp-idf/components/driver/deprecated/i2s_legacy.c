@@ -240,7 +240,7 @@ static bool IRAM_ATTR i2s_dma_tx_callback(gdma_channel_handle_t dma_chan, gdma_e
         }
         if (p_i2s->tx_desc_auto_clear) {
             uint8_t *sent_buf = (uint8_t *)finish_desc->buf;
-            memset(sent_buf, 0, p_i2s->tx->buf_size);
+            memset(sent_buf, -1, p_i2s->tx->buf_size);
 #if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
             esp_cache_msync(sent_buf, p_i2s->tx->buf_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 #endif
@@ -301,7 +301,7 @@ static void IRAM_ATTR i2s_intr_handler_default(void *arg)
         // This will avoid any kind of noise that may get introduced due to transmission
         // of previous data from tx descriptor on I2S line.
         if (p_i2s->tx_desc_auto_clear == true) {
-            memset((void *)(((lldesc_t *)finish_desc)->buf), 0, p_i2s->tx->buf_size);
+            memset((void *)(((lldesc_t *)finish_desc)->buf), -1, p_i2s->tx->buf_size);
         }
         xQueueSendFromISR(p_i2s->tx->queue, &(((lldesc_t *)finish_desc)->buf), &tmp);
         need_awoke |= tmp;
@@ -582,11 +582,14 @@ static esp_err_t i2s_alloc_dma_buffer(i2s_port_t i2s_num, i2s_dma_t *dma_obj)
     uint32_t buf_cnt = p_i2s[i2s_num]->dma_desc_num;
     for (int cnt = 0; cnt < buf_cnt; cnt++) {
         /* Allocate DMA buffer */
-        dma_obj->buf[cnt] = heap_caps_aligned_calloc(4, 1, sizeof(char) * dma_obj->buf_size,
-                                                     MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-        ESP_GOTO_ON_FALSE(dma_obj->buf[cnt], ESP_ERR_NO_MEM, err, TAG, "Error malloc dma buffer");
+        size_t size = sizeof(char) * dma_obj->buf_size;
+        void *ptr = heap_caps_aligned_alloc(4, size, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        ESP_GOTO_ON_FALSE(ptr, ESP_ERR_NO_MEM, err, TAG, "Error malloc dma buffer");
+        memset(ptr, -1, size);
+        dma_obj->buf[cnt] = ptr;
+
 #if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
-        esp_cache_msync(dma_obj->buf[cnt], dma_obj->buf_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+        esp_cache_msync(ptr, size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 #endif
 
         /* Allocate DMA descriptor */
@@ -1930,7 +1933,7 @@ esp_err_t i2s_zero_dma_buffer(i2s_port_t i2s_num)
             i2s_write(i2s_num, (void *)&zero_bytes, bytes_left, &bytes_written, portMAX_DELAY);
         }
         for (int i = 0; i < buf_cnt; i++) {
-            memset(p_i2s[i2s_num]->tx->buf[i], 0, p_i2s[i2s_num]->tx->buf_size);
+            memset(p_i2s[i2s_num]->tx->buf[i], -1, p_i2s[i2s_num]->tx->buf_size);
         }
     }
     return ESP_OK;
