@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "driver/i2s.h"
+#include "soc/gpio_struct.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
@@ -1668,43 +1669,47 @@ static void beatTask(void* arg) {
 
 
 static void setupGPIO() {
-        gpio_config_t btn_cfg {
-            .pin_bit_mask =
-                (1ULL << GPIO_NUM_34),  /* Button input */
+        gpio_config_t cfg {
+            .pin_bit_mask = (1ULL << GPIO_NUM_34),  /* Button input */
             .mode = GPIO_MODE_INPUT
         };
-        gpio_config(&btn_cfg);
+        gpio_config(&cfg);
 
-        btn_cfg.pin_bit_mask =
-                (1ULL << GPIO_NUM_4) |  /* PCM5102 LDO enable */
-                (1ULL << GPIO_NUM_5) |  /* PCM5102 Mute */
-                (1ULL << GPIO_NUM_19)|  /* TPA3116 Mute */
-                (1ULL << GPIO_NUM_33);  /* Battery voltage sampler strobe */
-        btn_cfg.mode = GPIO_MODE_OUTPUT,
-        gpio_config(&btn_cfg);
-        gpio_set_level(GPIO_NUM_4, 1);
-        gpio_set_level(GPIO_NUM_5, 1);
-        gpio_set_level(GPIO_NUM_19, 0);
+        cfg.pin_bit_mask =
+            (1ULL << GPIO_NUM_4) |  /* PCM5102 LDO enable */
+            (1ULL << GPIO_NUM_5) |  /* PCM5102 Mute */
+            (1ULL << GPIO_NUM_19)|  /* TPA3116 Mute */
+            (1ULL << GPIO_NUM_33);  /* Battery voltage sampler strobe */
+        cfg.mode = GPIO_MODE_OUTPUT,
+        gpio_config(&cfg);
 
-        btn_cfg.pin_bit_mask =
-                (1ULL << GPIO_NUM_21)|  /* Button LED Red */
-                (1ULL << GPIO_NUM_22)|  /* Button LED Green */
-                (1ULL << GPIO_NUM_23);  /* Button LED Blue */
-        btn_cfg.mode = GPIO_MODE_OUTPUT_OD,
-        gpio_config(&btn_cfg);
+        cfg.pin_bit_mask =
+            (1ULL << GPIO_NUM_21)|  /* Button LED Red */
+            (1ULL << GPIO_NUM_22)|  /* Button LED Green */
+            (1ULL << GPIO_NUM_23);  /* Button LED Blue */
+        cfg.mode = GPIO_MODE_OUTPUT_OD,
+        gpio_config(&cfg);
         gpio_set_drive_capability(GPIO_NUM_21, GPIO_DRIVE_CAP_1);
         gpio_set_drive_capability(GPIO_NUM_22, GPIO_DRIVE_CAP_1);
         gpio_set_drive_capability(GPIO_NUM_23, GPIO_DRIVE_CAP_1);
-        gpio_set_level(GPIO_NUM_21, 1);
-        gpio_set_level(GPIO_NUM_22, 1);
-        gpio_set_level(GPIO_NUM_23, 0);
 
-        btn_cfg.pin_bit_mask =
+        cfg.pin_bit_mask =
                 (1ULL << GPIO_NUM_18);  /* TPA3116 Shutdown & Fault */
-        btn_cfg.mode = GPIO_MODE_INPUT_OUTPUT_OD,
-        btn_cfg.pull_up_en = GPIO_PULLUP_ENABLE;
-        gpio_config(&btn_cfg);
-        gpio_set_level(GPIO_NUM_18, 1);
+        cfg.mode = GPIO_MODE_INPUT_OUTPUT_OD,
+        cfg.pull_up_en = GPIO_PULLUP_ENABLE;
+        gpio_config(&cfg);
+
+        GPIO.out_w1ts = 
+            (1 << GPIO_NUM_4) |  /* PCM5102 LDO enable */
+            (1 << GPIO_NUM_5) |  /* PCM5102 Mute */
+            (1 << GPIO_NUM_18)|  /* TPA3116 Shutdown & Fault */
+            (1 << GPIO_NUM_19)|  /* TPA3116 Mute */
+            (1 << GPIO_NUM_21)|  /* Button LED Red */
+            (1 << GPIO_NUM_22);  /* Button LED Green */
+
+        GPIO.out_w1tc = 
+//          (1 << GPIO_NUM_19)|  /* DEBUG - unmute TPA3116 !!! */
+            (1 << GPIO_NUM_23);  /* Button LED Blue */
 }
 
 

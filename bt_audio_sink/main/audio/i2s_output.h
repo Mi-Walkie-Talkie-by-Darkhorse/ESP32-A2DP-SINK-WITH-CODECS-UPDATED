@@ -20,6 +20,7 @@ public:
     I2SOutput() 
         : m_initialized(false)
         , m_sampleRate(0)
+        , m_bufferCapacity(0)
         , m_reconfig(false)
         , m_mutex(nullptr)
         , m_sampleRateCallback(nullptr)
@@ -105,6 +106,7 @@ public:
         }
 
         m_initialized = true;
+        m_bufferCapacity = i2s_config.dma_buf_len * i2s_config.dma_buf_count;
         m_sampleRate = sampleRate;
         ESP_LOGI(TAG, "I2S initialized: sr=%u, 32-bit stereo", (unsigned)sampleRate);
         return ESP_OK;
@@ -161,6 +163,10 @@ public:
         zeroDMA();
     }
 
+    uint32_t getBufferedMillisec() const { // millisec
+        return (m_sampleRate == 0) ? 0 : (m_bufferCapacity * 1000 / m_sampleRate);
+    }
+
     // Write audio data
     size_t write(const void *data, size_t bytes) {
         if (!m_initialized || m_reconfig) return 0;
@@ -211,6 +217,7 @@ private:
 
     bool m_initialized;
     uint32_t m_sampleRate;
+    uint32_t m_bufferCapacity;
     volatile bool m_reconfig;
     SemaphoreHandle_t m_mutex;
     SampleRateChangeCallback m_sampleRateCallback;
