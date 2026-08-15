@@ -62,8 +62,6 @@ public:
         if (m_pool) heap_caps_free(m_pool);
         if (m_dspOut) heap_caps_free(m_dspOut);
         if (m_stagingBuf) heap_caps_free(m_stagingBuf);
-
-        if (m_stagingBuf) heap_caps_free(m_stagingBuf);
         if (m_AutoMuteTimer) xTimerDelete(m_AutoMuteTimer, portMAX_DELAY);
     }
     
@@ -266,7 +264,10 @@ public:
         }
 
         if (frames > 0) {
-            if (frames > APP_DSP_OUT_FRAMES) frames = APP_DSP_OUT_FRAMES;
+            if (frames > APP_DSP_OUT_FRAMES) {
+                ESP_LOGW(TAG, "Buffer too large: %u frames", (unsigned)frames);
+                frames = APP_DSP_OUT_FRAMES;
+            }
 
             int32_t outSum = (bytesPerSample == 2)
                 ? processFast((int16_t *)(audioData), frames, channels, m_scaleIn16, m_dspOut, dsp)
@@ -279,19 +280,18 @@ public:
             }
 
             if (!skipWrite) {
-                if (outSum != 0) GPIO.out_w1tc = 1 << GPIO_NUM_19;
+                if (outSum != 0) {
+                    xTimerChangePeriod(m_AutoMuteTimer, pdMS_TO_TICKS(i2s.getBufferedMillisec()) + 1, portMAX_DELAY);
+                    GPIO.out_w1tc = 1 << GPIO_NUM_19;
+                }
 
                 size_t bytesToWrite = frames * 2u * sizeof(int32_t);
                 size_t written = i2s.write(m_dspOut, bytesToWrite);
-
-                if (outSum != 0) xTimerChangePeriod(m_AutoMuteTimer, pdMS_TO_TICKS(i2s.getBufferedMillisec()) + 1, portMAX_DELAY);
+ 
+                if (written < bytesToWrite) m_shortWriteCount++;
 
                 m_writeCount++;
                 m_lastProcessMs = millis32();
-
-                if (written < bytesToWrite) {
-                    m_shortWriteCount++;
-                }
             }
         }
 
